@@ -8,7 +8,7 @@ class MyrrixClient(object):
         self.host = host
         self.port = port
 
-    def _make_request(self, method, path, params=None, data=None):
+    def _make_request(self, method, path, params=None, data=None, lines_of_float=False):
         methods = {
             'GET': requests.get,
             'POST': requests.post,
@@ -23,6 +23,8 @@ class MyrrixClient(object):
         resp = method_func(url, params=params, headers=headers)
         if not resp.ok:
             return None
+        if lines_of_float:
+            return map(float, resp.content.strip().split('\n'))
         return resp.json()
 
     def add_preference(self, user_id, item_id, strength=None):
@@ -154,7 +156,7 @@ class MyrrixClient(object):
         """
         if not isinstance(item_ids, list):
             item_ids = [item_ids]
-        return self._make_request('GET', 'estimate/%d/' % user_id + '/'.join(map(str, item_ids)))
+        return self._make_request('GET', 'estimate/%d/' % user_id + '/'.join(map(str, item_ids)), lines_of_float=True)
 
     def estimate_for_anonymous(self, to_item_id, preferences):
         """
