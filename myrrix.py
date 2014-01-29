@@ -8,7 +8,7 @@ class MyrrixClient(object):
         self.host = host
         self.port = port
 
-    def _make_request(self, method, path, params=None, data=None, lines_of_float=False):
+    def _make_request(self, method, path, params=None, data=None, lines_of_float=False, json_result=True):
         methods = {
             'GET': requests.get,
             'POST': requests.post,
@@ -18,14 +18,19 @@ class MyrrixClient(object):
         method_func = methods[method]
 
         url = 'http://%s:%d/%s' % (self.host, self.port, path)
-        headers={'Accept': 'application/json'}
+        headers={
+            'Accept': 'application/json',
+            'Content-Type': '',
+        }
 
-        resp = method_func(url, params=params, headers=headers)
+        resp = method_func(url, params=params, headers=headers, data=data)
+
         if not resp.ok:
             return None
         if lines_of_float:
             return map(float, resp.content.strip().split('\n'))
-        return resp.json()
+        if json_result:
+            return resp.json()
 
     def add_preference(self, user_id, item_id, strength=None):
         """
@@ -44,7 +49,7 @@ class MyrrixClient(object):
         """
         if strength is not None:
             strength = str(strength)
-        self._make_request('POST', 'pref/%d/%d' % (user_id, item_id), data=strength)
+        self._make_request('POST', 'pref/%d/%d' % (user_id, item_id), data=strength, json_result=False)
 
     def remove_preference(self, user_id, item_id):
         """
@@ -63,7 +68,7 @@ class MyrrixClient(object):
         """
         if strength is not None:
             strength = str(strength)
-        self._make_request('POST', 'tag/user/%d/%s' % (user_id, tag), data=strength)
+        self._make_request('POST', 'tag/user/%d/%s' % (user_id, tag), data=strength, json_result=False)
 
     def set_item_tag(self, item_id, tag, strength):
         """
@@ -71,7 +76,7 @@ class MyrrixClient(object):
         """
         if strength is not None:
             strength = str(strength)
-        self._make_request('POST', 'tag/item/%d/%s' % (item_id, tag), data=strength)
+        self._make_request('POST', 'tag/item/%d/%s' % (item_id, tag), data=strength, json_result=False)
 
     def ingest(self, preferences):
         """
@@ -80,7 +85,7 @@ class MyrrixClient(object):
         New preferences as a list of the tuples (userID,itemID[,value]). Value is optional and defaults to 1.0.
         """
         data = '\n'.join(','.join(map(str, entry)) for entry in preferences)
-        self._make_request('POST', 'ingest', data=data)
+        self._make_request('POST', 'ingest', data=data, json_result=False)
 
     def _recommend_params(self, how_many=None, consider_known_items=None, rescorer_params=None):
         params = werkzeug.datastructures.MultiDict({
